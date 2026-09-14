@@ -42,6 +42,87 @@ Oracle documents that a **Full Clone** copies dependent disk images and becomes 
 
 ---
 
+# What we tried before Clonezilla
+
+Clonezilla was not the first solution attempted. Several safer and more direct methods were tried first.
+
+## 1. Verify what Kali and VirtualBox could actually see
+
+Inside Kali, the disk layout was checked with tools including:
+
+```bash
+lsblk
+sudo fdisk -l /dev/sda
+```
+
+Kali reported the working virtual disk as approximately **339.1 GiB**:
+
+- `/dev/sda1`: approximately **237.3 GiB**, mounted as `/`
+- `/dev/sda5`: approximately **12.7 GiB** swap
+- Partition table: DOS / MBR
+
+VirtualBox, however, showed a **250 GB base VDI** plus a larger snapshot differencing disk. This mismatch confirmed that Kali was booting from the assembled snapshot chain rather than directly from one simple standalone VDI.
+
+## 2. Try resizing through VirtualBox
+
+A normal VirtualBox disk resize was investigated first. This could enlarge the base image, but it could not safely flatten or replace the active snapshot chain. Increasing the VDI's advertised capacity also would not automatically enlarge Kali's partition and EXT4 filesystem.
+
+Because the working state depended on a differencing disk, directly resizing the base VDI was not a complete or safe solution.
+
+## 3. Try cloning through the VirtualBox interface
+
+A normal VirtualBox clone was the first copy method attempted. The goal was to create a **Full Clone** with all dependent disk states merged into one independent disk.
+
+The clone did not complete, so no verified standalone VM was produced.
+
+## 4. Try PowerShell and VBoxManage
+
+Administrator PowerShell and `VBoxManage` were then used to try creating a standalone VDI outside the graphical interface.
+
+The planned output was:
+
+```text
+C:\Users\charl\VirtualBox VMs\kalilinux\kalilinux-standalone.vdi
+```
+
+The intended workflow was:
+
+1. Clone the assembled virtual disk into a standalone VDI.
+2. Resize the standalone VDI to 500 GB.
+3. Attach it as the VM's main disk.
+4. Boot it and expand the Linux partition and filesystem.
+
+The clone/copy failed at approximately **30%** with:
+
+```text
+VERR_INVALID_PARAMETER
+```
+
+The VirtualBox clone was attempted twice and failed at roughly the same point both times. Repeating the same cloning operation was stopped to avoid wasting more time or risking the only working VM.
+
+## 5. Try QEMU as an alternate route
+
+QEMU was also tried as an alternative way to work with or convert the virtual disk outside VirtualBox.
+
+That route did not produce a verified, standalone, bootable replacement for the working snapshot-chain disk, so it was abandoned rather than risking changes to the original data.
+
+## Why we finally changed methods
+
+At this point, the problem was clearly not simply a lack of allocated storage. The working Kali installation existed across a VirtualBox snapshot/differencing-disk chain, and both VirtualBox's graphical clone and command-line clone failed.
+
+The recovery strategy therefore changed:
+
+- Stop retrying VirtualBox cloning.
+- Leave the original VM and snapshot chain intact.
+- Boot an offline live environment.
+- Let VirtualBox present the complete working chain as one source disk.
+- Copy that assembled disk to a new empty 500 GB VDI.
+- Boot and verify the new disk before deleting anything old.
+
+This is why Clonezilla Live became the next step.
+
+---
+
 # Recovery Procedure
 
 ## 1. Attach Clonezilla Live
