@@ -26,9 +26,7 @@ In this case, VirtualBox showed a 250 GB base VDI with a larger differencing chi
 
 Oracle documents that a **Full Clone** copies dependent disk images and becomes independent, while a **Linked Clone** creates differencing disks tied to the source VM. See the references at the end of this guide.
 
-![VirtualBox Media view](images/01-virtualbox-media-manager.png)
-
-![Snapshot and differencing disk view](images/02-snapshot-differencing-disk.png)
+![Setup and storage screenshots](composites/01-setup-and-storage.png)
 
 ## Safety rules used during recovery
 
@@ -50,8 +48,6 @@ With the Kali VM powered off:
 2. Under the optical controller, select **Empty**.
 3. Attach the Clonezilla Live ISO.
 
-![Clonezilla ISO attached](images/03-clonezilla-iso-attached.png)
-
 ## 2. Create a clean 500 GB destination VDI
 
 Create a new VDI named something unmistakable, for example:
@@ -67,17 +63,11 @@ Settings used:
 - Dynamically allocated / **Pre-allocate Full Size unchecked**
 - Split into 2 GB parts unchecked
 
-![Create 500 GB VDI](images/04-create-500gb-vdi.png)
-
 Attach the new disk to the same VM temporarily so Clonezilla can see both the source and destination.
-
-![Both disks attached](images/05-storage-both-disks.png)
 
 ## 3. Boot Clonezilla Live
 
 Boot the VM from the Clonezilla ISO.
-
-![Clonezilla boot menu](images/06-clonezilla-boot-menu.png)
 
 The initial Clonezilla path was:
 
@@ -92,21 +82,13 @@ disk_to_local_disk
 
 Choose the **working 339.1 GiB disk as the source**.
 
-![Select source disk](images/07-select-source-disk.png)
-
 Choose the **empty 500 GiB disk as the target**.
 
-![Select target disk](images/08-select-target-disk.png)
-
 Clonezilla documents `-k1` for creating the destination partition table proportionally when cloning from a smaller disk to a larger disk.
-
-![Clonezilla k1 option](images/09-clonezilla-k1-option.png)
 
 ## 4. Partclone failed with an EXT4 bitmap error
 
 The first Clonezilla data-copy attempt did **not** complete. Partclone stopped with a filesystem bitmap error and instructed us to check the filesystem.
-
-![Partclone bitmap error](images/10-partclone-bitmap-error.png)
 
 At this point, do not keep repeating the same failed clone.
 
@@ -118,8 +100,6 @@ sudo e2fsck -f /dev/sda1
 ```
 
 `findmnt` returned no mounted entry for `/dev/sda1`, and `e2fsck` completed successfully.
-
-![e2fsck completed](images/11-e2fsck-clean.png)
 
 ## 5. Raw-copy the complete working disk with `dd`
 
@@ -140,11 +120,9 @@ sudo dd if=/dev/sda of=/dev/sdb bs=67108864 status=progress conv=fsync
 
 Do not use these device names blindly on another system. Verify your own source and target first.
 
-![dd copy running](images/12-dd-copy-running.png)
-
 The command returned to the prompt after copying the complete source disk.
 
-![dd copy completed](images/13-dd-copy-complete.png)
+![Clonezilla and raw-copy screenshots](composites/02-clone-and-raw-copy.png)
 
 ## 6. Boot-test the new disk by itself
 
@@ -162,8 +140,6 @@ The clean disk booted successfully.
 
 At this point, `df -h /` still showed only the old root filesystem size because `dd` copied the old partition table exactly.
 
-![Before partition expansion](images/14-before-expansion-df.png)
-
 ## 7. Inspect the new 500 GB disk layout
 
 Run:
@@ -178,8 +154,6 @@ The layout showed:
 - old swap / extended partition after root
 - about 250+ GiB of free space after that
 
-![Disk layout before expansion](images/15-before-expansion-layout.png)
-
 The swap partition blocked the root partition from growing directly into the free space.
 
 Check swap:
@@ -187,8 +161,6 @@ Check swap:
 ```bash
 swapon --show
 ```
-
-![Swap partition](images/16-swap-partition.png)
 
 Disable swap:
 
@@ -236,7 +208,7 @@ Verify that free space is now directly adjacent to partition 1:
 sudo parted /dev/sda unit GiB print free
 ```
 
-![Free space adjacent to root](images/17-free-space-adjacent.png)
+![Partition preparation screenshots](composites/03-partition-prep.png)
 
 ## 8. Resize the root partition offline
 
@@ -248,15 +220,11 @@ Power Kali off, attach Clonezilla Live again, boot to its command-line shell, an
 sudo parted /dev/sda resizepart 1 100%
 ```
 
-![Offline resizepart success](images/18-offline-resizepart-success.png)
-
 Check the filesystem again before growing it:
 
 ```bash
 sudo e2fsck -f /dev/sda1
 ```
-
-![Offline e2fsck complete](images/19-offline-e2fsck-complete.png)
 
 Then expand the EXT4 filesystem to fill the enlarged partition:
 
@@ -264,7 +232,7 @@ Then expand the EXT4 filesystem to fill the enlarged partition:
 sudo resize2fs /dev/sda1
 ```
 
-![resize2fs success](images/20-resize2fs-success.png)
+![Offline resize screenshots](composites/04-offline-resize.png)
 
 Power off Clonezilla, remove the ISO, and boot Kali normally.
 
@@ -283,7 +251,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1       492G   33G  434G   8% /
 ```
 
-![Final 492 GB verification](images/21-final-492gb-verification.png)
+![Final 492 GB verification](composites/05-final-verification.png)
 
 The 500 GB VDI was now bootable and independent, with approximately **492 GB usable** and **434 GB free**.
 
