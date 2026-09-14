@@ -26,7 +26,11 @@ In this case, VirtualBox showed a 250 GB base VDI with a larger differencing chi
 
 Oracle documents that a **Full Clone** copies dependent disk images and becomes independent, while a **Linked Clone** creates differencing disks tied to the source VM. See the references at the end of this guide.
 
-![Setup and storage screenshots](composites/01-setup-and-storage.png)
+![VirtualBox Media view](screenshots/01-virtualbox-media-manager.jpg)
+
+![Snapshot differencing-disk chain](screenshots/02-snapshot-differencing-disk.jpg)
+
+
 
 ## Safety rules used during recovery
 
@@ -48,6 +52,7 @@ With the Kali VM powered off:
 2. Under the optical controller, select **Empty**.
 3. Attach the Clonezilla Live ISO.
 
+
 ## 2. Create a clean 500 GB destination VDI
 
 Create a new VDI named something unmistakable, for example:
@@ -63,11 +68,14 @@ Settings used:
 - Dynamically allocated / **Pre-allocate Full Size unchecked**
 - Split into 2 GB parts unchecked
 
+
 Attach the new disk to the same VM temporarily so Clonezilla can see both the source and destination.
+
 
 ## 3. Boot Clonezilla Live
 
 Boot the VM from the Clonezilla ISO.
+
 
 The initial Clonezilla path was:
 
@@ -82,13 +90,17 @@ disk_to_local_disk
 
 Choose the **working 339.1 GiB disk as the source**.
 
+
 Choose the **empty 500 GiB disk as the target**.
 
+
 Clonezilla documents `-k1` for creating the destination partition table proportionally when cloning from a smaller disk to a larger disk.
+
 
 ## 4. Partclone failed with an EXT4 bitmap error
 
 The first Clonezilla data-copy attempt did **not** complete. Partclone stopped with a filesystem bitmap error and instructed us to check the filesystem.
+
 
 At this point, do not keep repeating the same failed clone.
 
@@ -100,6 +112,7 @@ sudo e2fsck -f /dev/sda1
 ```
 
 `findmnt` returned no mounted entry for `/dev/sda1`, and `e2fsck` completed successfully.
+
 
 ## 5. Raw-copy the complete working disk with `dd`
 
@@ -120,9 +133,13 @@ sudo dd if=/dev/sda of=/dev/sdb bs=67108864 status=progress conv=fsync
 
 Do not use these device names blindly on another system. Verify your own source and target first.
 
+
 The command returned to the prompt after copying the complete source disk.
 
-![Clonezilla and raw-copy screenshots](composites/02-clone-and-raw-copy.png)
+![Partclone bitmap error](screenshots/10-partclone-bitmap-error.jpg)
+
+![Raw `dd` copy running](screenshots/12-dd-copy-running.jpg)
+
 
 ## 6. Boot-test the new disk by itself
 
@@ -140,6 +157,7 @@ The clean disk booted successfully.
 
 At this point, `df -h /` still showed only the old root filesystem size because `dd` copied the old partition table exactly.
 
+
 ## 7. Inspect the new 500 GB disk layout
 
 Run:
@@ -154,6 +172,7 @@ The layout showed:
 - old swap / extended partition after root
 - about 250+ GiB of free space after that
 
+
 The swap partition blocked the root partition from growing directly into the free space.
 
 Check swap:
@@ -161,6 +180,7 @@ Check swap:
 ```bash
 swapon --show
 ```
+
 
 Disable swap:
 
@@ -208,7 +228,8 @@ Verify that free space is now directly adjacent to partition 1:
 sudo parted /dev/sda unit GiB print free
 ```
 
-![Partition preparation screenshots](composites/03-partition-prep.png)
+![Partition layout before expansion](screenshots/15-before-expansion-layout.jpg)
+
 
 ## 8. Resize the root partition offline
 
@@ -220,11 +241,13 @@ Power Kali off, attach Clonezilla Live again, boot to its command-line shell, an
 sudo parted /dev/sda resizepart 1 100%
 ```
 
+
 Check the filesystem again before growing it:
 
 ```bash
 sudo e2fsck -f /dev/sda1
 ```
+
 
 Then expand the EXT4 filesystem to fill the enlarged partition:
 
@@ -232,7 +255,8 @@ Then expand the EXT4 filesystem to fill the enlarged partition:
 sudo resize2fs /dev/sda1
 ```
 
-![Offline resize screenshots](composites/04-offline-resize.png)
+
+
 
 Power off Clonezilla, remove the ISO, and boot Kali normally.
 
@@ -251,7 +275,8 @@ Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1       492G   33G  434G   8% /
 ```
 
-![Final 492 GB verification](composites/05-final-verification.png)
+![Final 492 GB verification](screenshots/21-final-492gb-verification.jpg)
+
 
 The 500 GB VDI was now bootable and independent, with approximately **492 GB usable** and **434 GB free**.
 
@@ -313,3 +338,4 @@ Sometimes the best homelabs are the ones you accidentally build while trying to 
 - GNU Coreutils `dd`: https://www.gnu.org/software/coreutils/manual/html_node/dd-invocation.html
 - `e2fsck` manual: https://man7.org/linux/man-pages/man8/e2fsck.8.html
 - `resize2fs` manual: https://man7.org/linux/man-pages/man8/resize2fs.8.html
+
