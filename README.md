@@ -26,9 +26,9 @@ In this case, VirtualBox showed a 250 GB base VDI with a larger differencing chi
 
 Oracle documents that a **Full Clone** copies dependent disk images and becomes independent, while a **Linked Clone** creates differencing disks tied to the source VM. See the references at the end of this guide.
 
-> 📷 **Screenshot coming soon:** VirtualBox Media Manager showing the original disk chain.
+![VirtualBox Media Manager showing the original disk chain](screenshots/01-virtualbox-media-manager.jpg)
 
-> 📷 **Screenshot coming soon:** VirtualBox snapshot and differencing-disk relationship.
+![VirtualBox snapshot and differencing-disk relationship](screenshots/02-snapshot-differencing-disk.jpg)
 
 
 
@@ -97,6 +97,8 @@ The clone/copy failed at approximately **30%** with:
 ```text
 VERR_INVALID_PARAMETER
 ```
+
+![PowerShell VBoxManage clone failure](screenshots/03-powershell-vboxmanage-error.jpg)
 
 The VirtualBox clone was attempted twice and failed at roughly the same point both times. Repeating the same cloning operation was stopped to avoid wasting more time or risking the only working VM.
 
@@ -217,9 +219,9 @@ Do not use these device names blindly on another system. Verify your own source 
 
 The command returned to the prompt after copying the complete source disk.
 
-> 📷 **Screenshot coming soon:** Clonezilla Partclone EXT4 bitmap error.
+![Clonezilla Partclone EXT4 bitmap error](screenshots/10-partclone-bitmap-error.jpg)
 
-> 📷 **Screenshot coming soon:** Raw `dd` disk copy running with progress output.
+![Raw dd disk copy running with progress output](screenshots/12-dd-copy-running.jpg)
 
 
 ## 6. Boot-test the new disk by itself
@@ -309,7 +311,7 @@ Verify that free space is now directly adjacent to partition 1:
 sudo parted /dev/sda unit GiB print free
 ```
 
-> 📷 **Screenshot coming soon:** Partition layout before removing swap and expanding the root partition.
+![Partition layout before removing swap and expanding the root partition](screenshots/15-before-expansion-layout.jpg)
 
 
 ## 8. Resize the root partition offline
@@ -356,7 +358,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1       492G   33G  434G   8% /
 ```
 
-> 📷 **Screenshot coming soon:** Final `df -h /` result showing 492 GB usable and 434 GB free.
+![Final df -h result showing 492 GB usable and 434 GB free](screenshots/21-final-492gb-verification.jpg)
 
 
 The 500 GB VDI was now bootable and independent, with approximately **492 GB usable** and **434 GB free**.
